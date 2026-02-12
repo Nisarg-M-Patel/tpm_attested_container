@@ -174,6 +174,13 @@ def handle_option_1(registry):
         save_registry(registry)
         print(f"instance {instance_id} registered")
 
+def remove_instance(registry, instance_id):
+    if instance_id not in registry["instances"]:
+        print(f"instance {instance_id} not registered")
+        return False
+    del registry["instances"][instance_id]
+    return True
+
 def main():
 
     if "--init" in sys.argv:
@@ -212,7 +219,12 @@ def main():
                 except ValueError:
                     print("enter a number")
             verify_continous(registry, instance_id, rounds, delay)
-            
+        
+        if choice == 4:
+            instance_id = input("Instance ID: ").strip()
+            if remove_instance(registry, instance_id):
+                save_registry(registry)
+                print(f"Instance {instance_id} removed")
         if choice == 5:
             break
 

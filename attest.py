@@ -3,6 +3,8 @@ import json
 import subprocess
 import time
 import secrets
+import sys
+os.environ["TPM2TOOLS_TCTI"] = "swtpm:host=127.0.0.1,port=2321"
 
 #file references
 REG_FILE = "instance_registry.json"
@@ -126,7 +128,7 @@ def verify_instance(registry, instance_id):
     finally:
         tpm_flush()
         
-def verify_continous(registry, instance_id, rounds, delay):
+def verify_continous(registry, instance_id, rounds, delay, kill_after_round=None):
     if instance_id not in registry["instances"]:
         print(f"instance {instance_id} not registered")
         return False
@@ -147,6 +149,9 @@ def verify_continous(registry, instance_id, rounds, delay):
             return False
         
         print(f"round: {round} succeeded")
+
+        if kill_after_round and round == kill_after_round:
+            kill_swtpm()
         if round < rounds:
             time.sleep(delay)
     
@@ -154,6 +159,8 @@ def verify_continous(registry, instance_id, rounds, delay):
     print(f"continous verification passed for instance {instance_id}")
     return True
 
+def kill_swtpm():
+    subprocess.run(["pkill", "-f", "swtpm"], capture_output=True, check=False)
 
 
 def handle_option_1(registry):
@@ -168,6 +175,9 @@ def handle_option_1(registry):
         print(f"instance {instance_id} registered")
 
 def main():
+
+    if "--init" in sys.argv:
+        subprocess.run(["bash", "init_tpm.sh"])
 
     registry = load_registry()
 

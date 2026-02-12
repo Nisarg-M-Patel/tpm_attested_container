@@ -137,7 +137,7 @@ def verify_continous(registry, instance_id, rounds, delay):
         write_challenge(nonce)
 
         try:
-            if not tpm_sign() or tpm_verify():
+            if not tpm_sign() or not tpm_verify():
                 print(f"continuous verification failed at round {round} for instance {instance_id}")
                 tpm_flush()
                 return False

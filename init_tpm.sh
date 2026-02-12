@@ -2,6 +2,7 @@
 # init_tpm.sh
 
 pkill -f swtpm 2>/dev/null
+rm -f /tmp/tpm2-00.*
 sleep 1
 
 swtpm socket --tpm2 --daemon \

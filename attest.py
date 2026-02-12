@@ -94,7 +94,7 @@ def tpm_flush():
     subprocess.run(["tpm2_flushcontext", "-t"], capture_output=True, check=False)
 
 def corrupt_sig():
-    with open(SIG_FILE, 'ab') as f:
+    with open(SIG_FILE, 'r+b') as f:
         f.write(b'corruption text')
     
 
@@ -117,7 +117,7 @@ def verify_instance(registry, instance_id):
         
         #corruption test
         corrupt_sig()
-        
+
         if not tpm_verify():
             print(f"attestation failed, could not verify {instance_id}")
             return False

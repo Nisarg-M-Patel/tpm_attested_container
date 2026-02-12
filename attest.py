@@ -71,6 +71,49 @@ def add_instance(registry, instance_id, pub_key_path):
         }
     return True
 
+def generate_nonce():
+    return secrets.token_hex(NONCE_LEN)
+
+def write_challenge(nonce):
+    with open(CHALLENGE_FILE, 'w') as f:
+        f.write(nonce)
+
+def tpm_sign():
+    res = subprocess.run(["tpm2_sign", "-c", TPM_CONTEXT, "-g", "sha256", "-o", SIG_FILE, CHALLENGE_FILE],
+                         capture_output=True, text=True, check=False)
+    return res.returncode == 0
+
+def tpm_verify():
+    res = subprocess.run(["tpm2_verifysignature", "-c", TPM_CONTEXT, "-g", "sha256", "-s", SIG_FILE, "-m", CHALLENGE_FILE],
+                         capture_output=True, text=True, check=False)
+    return res.returncode == 0
+
+def tpm_flush():
+    subprocess.run(["tpm2_flushcontext", "-t"], capture_output=True, check=False)
+
+def verify_instance(registry, instance_id):
+    if instance_id not in registry["instances"]:
+        print(f"instance {instance_id} not registered")
+        return False
+    
+    nonce = generate_nonce()
+    write_challenge(nonce)
+
+    try:
+        if not tpm_sign():
+            print(f"attestation failed, could not sign {instance_id}")
+            return False
+        if not tpm_verify():
+            print(f"attestation failed, could not verify {instance_id}")
+            return False
+        print(f"instance {instance_id} verified")
+        return True
+    finally:
+        tpm_flush()
+        
+
+
+
 def handle_option_1(registry):
     '''
     handler for menu option 1
@@ -93,6 +136,10 @@ def main():
 
         if choice == 1:
             handle_option_1(registry)
+        
+        if choice == 2:
+            instance_id = input("Instance ID: ").strip()
+            verify_instance(registry, instance_id)
             
         if choice == 5:
             break

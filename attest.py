@@ -61,7 +61,7 @@ def add_instance(registry, instance_id, pub_key_path):
     register new instance, return bool success
     '''
     if instance_id in registry["instances"]:
-        print(f"{instance_id} already registered")
+        print(f"FAILURE: instance {instance_id} already registered")
         return False
     if not os.path.exists(pub_key_path):
         print("public key file not found")
@@ -102,7 +102,7 @@ def corrupt_sig():
 
 def verify_instance(registry, instance_id):
     if instance_id not in registry["instances"]:
-        print(f"instance {instance_id} not registered")
+        print(f"FAILURE: instance {instance_id} not registered")
         return False
     
 
@@ -156,7 +156,7 @@ def verify_continous(registry, instance_id, rounds, delay, kill_after_round=None
             time.sleep(delay)
     
     tpm_flush()
-    print(f"continous verification passed for instance {instance_id}")
+    print(f"Success: continous verification passed for instance {instance_id}")
     return True
 
 def kill_swtpm():
@@ -172,11 +172,11 @@ def handle_option_1(registry):
 
     if add_instance(registry, instance_id, pub_key_path):
         save_registry(registry)
-        print(f"instance {instance_id} registered")
+        print(f"SUCCESS: instance {instance_id} registered")
 
 def remove_instance(registry, instance_id):
     if instance_id not in registry["instances"]:
-        print(f"instance {instance_id} not registered")
+        print(f"FAILURE: instance {instance_id} not registered")
         return False
     del registry["instances"][instance_id]
     return True
@@ -224,7 +224,7 @@ def main():
             instance_id = input("Instance ID: ").strip()
             if remove_instance(registry, instance_id):
                 save_registry(registry)
-                print(f"Instance {instance_id} removed")
+                print(f"SUCCESS: Instance {instance_id} removed")
         if choice == 5:
             break
 

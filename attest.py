@@ -116,7 +116,7 @@ def verify_instance(registry, instance_id):
             return False
         
         #corruption test
-        corrupt_sig()
+        #corrupt_sig()
 
         if not tpm_verify():
             print(f"attestation failed, could not verify {instance_id}")
@@ -126,6 +126,33 @@ def verify_instance(registry, instance_id):
     finally:
         tpm_flush()
         
+def verify_continous(registry, instance_id, rounds, delay):
+    if instance_id not in registry["instances"]:
+        print(f"instance {instance_id} not registered")
+        return False
+    
+    for round in range(1, rounds + 1):
+        tpm_flush()
+        nonce = generate_nonce()
+        write_challenge(nonce)
+
+        try:
+            if not tpm_sign() or tpm_verify():
+                print(f"continuous verification failed at round {round} for instance {instance_id}")
+                tpm_flush()
+                return False
+        except Exception:
+            print(f"continuous verification failed at round {round} for instance {instance_id}")
+            tpm_flush()
+            return False
+        
+        print(f"round: {round} succeeded")
+        if round < rounds:
+            time.sleep(delay)
+    
+    tpm_flush()
+    print(f"continous verification passed for instance {instance_id}")
+    return True
 
 
 
@@ -155,6 +182,26 @@ def main():
         if choice == 2:
             instance_id = input("Instance ID: ").strip()
             verify_instance(registry, instance_id)
+        
+        if choice == 3:
+            instance_id = input("Instance ID: ").strip()
+            while True:
+                try:
+                    rounds = int(input("Number of verification rounds: ").strip())
+                    if rounds > 0:
+                        break
+                    print("enter a positive number")
+                except ValueError:
+                    print("enter a number")
+            while True:
+                try:
+                    delay = int(input("Delay between rounds (seconds): ").strip())
+                    if delay > 0:
+                        break
+                    print("enter a positive number")
+                except ValueError:
+                    print("enter a number")
+            verify_continous(registry, instance_id, rounds, delay)
             
         if choice == 5:
             break

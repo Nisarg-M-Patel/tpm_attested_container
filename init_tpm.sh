@@ -17,6 +17,7 @@ export TPM2TOOLS_TCTI="swtpm:host=127.0.0.1,port=2321"
 tpm2_startup -c
 tpm2_createprimary -C o -c primary.ctx -g sha256 -G rsa
 tpm2_create -C primary.ctx -g sha256 -G rsa2048 -u id_tpm.pub -r id_tpm.priv
+tpm2_flushcontext -t
 tpm2_load -C primary.ctx -u id_tpm.pub -r id_tpm.priv -c id_tpm.ctx
 tpm2_flushcontext -t
 

@@ -83,8 +83,8 @@ def write_challenge(nonce):
 def tpm_sign():
     res = subprocess.run(["tpm2_sign", "-c", TPM_CONTEXT, "-g", "sha256", "-o", SIG_FILE, CHALLENGE_FILE],
                          capture_output=True, text=True, check=False)
-    print(f"sign returncode: {res.returncode}")
-    print(f"sign stderr: {res.stderr}")
+    #print(f"sign returncode: {res.returncode}")
+    #print(f"sign stderr: {res.stderr}")
     return res.returncode == 0
 
 def tpm_verify():

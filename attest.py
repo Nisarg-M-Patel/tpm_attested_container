@@ -98,6 +98,10 @@ def verify_instance(registry, instance_id):
         print(f"instance {instance_id} not registered")
         return False
     
+
+    #flush before to ensure clean slate
+    tpm_flush()
+
     nonce = generate_nonce()
     write_challenge(nonce)
 

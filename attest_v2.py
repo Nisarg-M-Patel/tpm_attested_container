@@ -210,7 +210,7 @@ def read_pcr(pcr_num):
         return None
     
     #strip out the 0x prefix to get plaintext string
-    match = re.search(r'0x([0-9A-Fa-f]+)', res.stdout)
+    match = re.search(r'0x([0-9A-Fa-f]+)', result.stdout)
     return match.group(1) if match else None
     
 

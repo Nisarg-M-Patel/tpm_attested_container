@@ -4,6 +4,7 @@ import subprocess
 import time
 import secrets
 import sys
+import re
 os.environ["TPM2TOOLS_TCTI"] = "swtpm:host=127.0.0.1,port=2321"
 
 #file references
@@ -20,17 +21,24 @@ def menu():
     print("3. Enforce continuous verification policy")
     print("4. Remove instance")
     print("5. Exit")
+    print("--- Lab2 ---")
+    print("6. Write to Top Secret Log")
+    print("7. Access Confidential Secret")
+    print("8. Access Top-secret secret")
+    print("9. Append Signed Ledger Entry (Clark-Wilson TP)")
+    print("10. Verify Ledger Integrity (Clark-Wilson IVP)")
+    print("11. Generate Certified Platform Quote (Clark-Wilson Certification)")
 
 def get_user_input():
     while True:
         try:
             choice = int(input("Enter option: ").strip())
-            if 1 <= choice <= 5:
+            if 1 <= choice <= 11:
                 return choice
             else:
-                print("choice not in range [1,5]")
+                print("choice not in range [1,11]")
         except ValueError:
-            print("invalid input, select a number [1,5]")
+            print("invalid input, select a number [1,11]")
 
 def load_registry():
     '''
@@ -181,6 +189,94 @@ def remove_instance(registry, instance_id):
     del registry["instances"][instance_id]
     return True
 
+'''
+LAB 2 FILE REFS
+'''
+PCR_GOOD_FILE = 'pcr16_good.txt'
+AUDIT_LOG_FILE = 'audit_log.txt'
+SECRET_CONF_CTX = 'secret_conf.ctx'
+SECRET_TS_CTX = 'secret_ts.ctx'
+SESSION_FILE = 'session.dat'
+LEDGER_FILE = 'ledger.json'
+
+#############################################################
+#helpers to read the pcr regs
+def read_pcr(pcr_num):
+    #read the current value of pcr_num pcr reg
+    result = subprocess.run(
+        ["tpm2_pcrread", f"sha256:{pcr_num}"], capture_output=True, text=True, check=False
+    )
+    if result.returncode != 0:
+        return None
+    
+    #strip out the 0x prefix to get plaintext string
+    match = re.search(r'(?<=0x[0-9A-Fa-f]+)', result.stdout)
+    return match.group(0) if match else None
+    
+
+def load_pcr_baseline(filepath):
+    #load the stored golden pcr value
+    try:
+        with open(filepath, 'r') as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        print(f"ERROR: baseline file {filepath} not found, run measure_tp.sh to reconcile")
+        return None
+    
+#############################################################
+
+
+#############################################################
+#BIBA 2.2
+def check_biba_integrity():
+    #read pcr16 and pcr16 baseline, return bool match
+    curr_pcr16 = read_pcr(16)
+    baseline = load_pcr_baseline(PCR_GOOD_FILE)
+    if curr_pcr16 is None or baseline is None:
+        return False
+    return curr_pcr16.lower() == baseline.lower()
+def write_top_secret_log(entry):
+    #check biba integrity, if true append to audit log
+    if not check_biba_integrity():
+        print("FAILURE: integrity check failed - write denied - Biba violation")
+        return
+    #append timestamped entry to audit log
+    timestamp = time.strftime("%Y-%m-%dT%H:%M:%S")
+    with open(AUDIT_LOG_FILE, 'a') as f:
+        f.write(f"[{timestamp}] {entry}\n")
+    print("SUCCESS: entry written to audit log")
+#############################################################
+
+#############################################################
+#BELL LAPADULA 3.3
+def unseal_secret(ctx_file, pcr_policy):
+    pass
+def access_confidential():
+    #unseal secret, print success or fail
+    pass
+def access_top_secret():
+    #unseal secret, print success or fail
+    pass
+#############################################################
+
+#############################################################
+#CLARK-WILSON 4.1,4.2,4.3
+def load_ledger():
+    pass
+def save_ledger(ledger):
+    pass
+def tpm_sign_file(input_file, sig_file):
+    pass
+def tpm_verify_file(input_file, sig_file):
+    pass
+def append_ledger_entry(entry_text):
+    pass
+def verify_ledger():
+    pass
+def generate_platform_quote():
+    pass
+
+
 def main():
 
     if "--init" in sys.argv:
@@ -227,6 +323,10 @@ def main():
                 print(f"SUCCESS: Instance {instance_id} removed")
         if choice == 5:
             break
+
+        if choice == 6:
+            entry = input("Log entry: ").strip()
+            write_top_secret_log(entry)
 
 if __name__ == "__main__":
     main()

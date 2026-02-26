@@ -1,3 +1,13 @@
+# Report Nisarg Patel GTID: 903792285
+
+## Note: init_tpm.sh and testing environment
+
+I added a helper script init_tpm.sh and took the liberty of adding a flag to attest.py runnable as \
+python3 attest.py --init \
+This saved me time during testing, especially when I needed to kill swtpm mid verification to test failure detection and quickly get everything back up and running. \
+
+For my testing environment, I spun up an Ubuntu VM on GCP rather than running a local virtual machine, and pulled my code in via a Git repo.
+
 # Integration Testing, Task 2.8
 '''
 nisargpatel@lab1:~/tpm_attested_container$ python3 attest.py --init

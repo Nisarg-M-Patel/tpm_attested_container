@@ -210,8 +210,8 @@ def read_pcr(pcr_num):
         return None
     
     #strip out the 0x prefix to get plaintext string
-    match = re.search(r'(?<=0x[0-9A-Fa-f]+)', result.stdout)
-    return match.group(0) if match else None
+    match = re.search(r'0x([0-9A-Fa-f]+)', res.stdout)
+    return match.group(1) if match else None
     
 
 def load_pcr_baseline(filepath):

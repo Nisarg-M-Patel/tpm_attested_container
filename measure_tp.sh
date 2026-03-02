@@ -29,6 +29,11 @@ PCR_VALUE=$(tpm2_pcrread sha256:$PCR_NUM | grep -oP '(?<=0x)[0-9A-Fa-f]+')
 echo "PCR $PCR_NUM value: $PCR_VALUE"
 
 
-#save the plain text hash string as the golden value
-echo $PCR_VALUE > $PCR_GOOD_FILE
-echo "Baseline saved to $PCR_GOOD_FILE"
+#save the plain text hash string as the golden value depending on flag
+if [ "$1" == "--baseline" ]; then
+    echo $PCR_VALUE > $PCR_GOOD_FILE
+    echo "Baseline saved to $PCR_GOOD_FILE"
+else
+    echo "No --baseline flag, skipping save"
+fi
+

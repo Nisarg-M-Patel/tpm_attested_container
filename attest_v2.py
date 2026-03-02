@@ -250,13 +250,61 @@ def write_top_secret_log(entry):
 #############################################################
 #BELL LAPADULA 3.3
 def unseal_secret(ctx_file, pcr_policy):
-    pass
+    '''
+    unseal tpm sealed using pcr policy session
+    '''
+    try:
+        result = subprocess.run(
+            ["tpm2_startauthsession", "-S", SESSION_FILE, "--policy-session"],
+            capture_output=True, text=True, check=False
+        )
+        if result.returncode != 0:
+            print(f"DEBUG startauthsession: {result.stderr}")
+            return None
+        #extend pcr policy into session
+        result = subprocess.run(
+            ["tpm2_policypcr", "-S", SESSION_FILE, "-l", pcr_policy],
+            capture_output=True, text=True, check=False
+        )
+        if result.returncode != 0:
+            print(f"DEBUG policypcr: {result.stderr}")
+            subprocess.run(["tpm2_flushcontext", SESSION_FILE], capture_output=True, check=False)
+            return None
+        #unseal secret
+        res = subprocess.run(
+            ["tpm2_unseal", "-c", ctx_file, "-p", f"session:{SESSION_FILE}"],
+            capture_output=True, text=True, check=False
+        )
+        
+        if res.returncode != 0:
+            print(f"DEBUG unseal stderr: {res.stderr}")
+            return None
+
+        return res.stdout.strip()
+    finally:
+        #flush tpm
+        subprocess.run(["tpm2_flushcontext", SESSION_FILE], capture_output=True, check=False)
+        tpm_flush()
+
+    
 def access_confidential():
     #unseal secret, print success or fail
-    pass
+    result = unseal_secret(SECRET_CONF_CTX, "sha256:16")
+    if result is not None:
+        print(f"SUCCESS: Confidential")
+        print(result)
+    else:
+        print("FAILURE: access denied - clearance insufficient or platform state invalid")
+
+    
 def access_top_secret():
     #unseal secret, print success or fail
-    pass
+    result = unseal_secret(SECRET_TS_CTX, "sha256:16,23")
+    if result is not None:
+        print(f"SUCCESS: Top Secret")
+        print(result)
+    else:
+        print("FAILURE: access denied - clearance insufficient or platform state invalid")
 #############################################################
 
 #############################################################
@@ -327,6 +375,12 @@ def main():
         if choice == 6:
             entry = input("Log entry: ").strip()
             write_top_secret_log(entry)
+        
+        if choice == 7:
+            access_confidential()
+        
+        if choice == 8:
+            access_top_secret()
 
 if __name__ == "__main__":
     main()

@@ -310,19 +310,123 @@ def access_top_secret():
 #############################################################
 #CLARK-WILSON 4.1,4.2,4.3
 def load_ledger():
-    pass
+    try:
+        with open(LEDGER_FILE, 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {"entries" : []}
+    except json.JSONDecodeError:
+        print(f"ERROR: {LEDGER_FILE} is malformed")
+        return {"entries" : []}
 def save_ledger(ledger):
-    pass
+    with open(LEDGER_FILE, 'w') as f:
+        json.dump(ledger, f, indent=2)
+    
 def tpm_sign_file(input_file, sig_file):
-    pass
+    tpm_flush()
+    result = subprocess.run(
+        ["tpm2_sign", "-c", TPM_CONTEXT, "-g", "sha256", "-o", sig_file, input_file],
+        capture_output=True, text=True, check=False
+    )
+    tpm_flush()
+    return result.returncode == 0
 def tpm_verify_file(input_file, sig_file):
-    pass
+    tpm_flush()
+    result = subprocess.run(
+        ["tpm2_verifysignature", "-c", TPM_CONTEXT, "-g", "sha256", "-s", sig_file, "-m", input_file],
+        capture_output=True, text=True, check=False
+    )
+    tpm_flush()
+    return result.returncode == 0
+    
 def append_ledger_entry(entry_text):
-    pass
+    ledger = load_ledger()
+    entry_id = len(ledger["entries"]) + 1
+    timestamp = time.strftime("%Y-%m-%dT%H:%M:%S")
+
+    record_file = f"entry_{entry_id}.txt"
+    sig_file = f"entry_{entry_id}.sig"
+
+    record = {
+        "id" : entry_id,
+        "timestamp" : timestamp,
+        "text" : entry_text
+    }
+
+    with open(record_file, 'w') as f:
+        json.dump(record, f, indent=2)
+
+    #sign the record
+    if not tpm_sign_file(record_file, sig_file):
+        print(f"FAILURE: TPM signing failed for entry {entry_id}")
+        return
+    
+    #append entry metadata to ledger
+    ledger["entries"].append({
+        "id" : entry_id,
+        "timestamp" : timestamp,
+        "text" : entry_text,
+        "record_file" : record_file,
+        "signature_file" : sig_file
+    })
+
+    save_ledger(ledger)
+    print(f"SUCCESS : ledger entry {entry_id} signed and recorded")
+
 def verify_ledger():
-    pass
+    ledger = load_ledger()
+    entries = ledger.get("entries", [])
+
+    if not entries:
+        print("ledger is empty")
+        return
+
+    for entry in entries:
+        entry_id = entry.get("id")
+        record_file = entry.get("record_file")
+        sig_file = entry.get("signature_file")
+
+        if not record_file or not sig_file:
+            print(f"FAILURE: integrity violation detected at entry {entry_id} -- missing file references")
+            return
+        if not os.path.exists(record_file):
+            print(f"FAILURE: integrity violation detected at entry {entry_id} -- record file missing")
+            return
+        if not os.path.exists(sig_file):
+            print(f"FAILURE: integrity violation detected at entry {entry_id} -- signature file missing")
+            return
+
+        if not tpm_verify_file(record_file, sig_file):
+            print(f"FAILURE: integrity violation detected at entry {entry_id}")
+            return
+            
+    print(f"SUCCESS : all {len(entries)} ledger entries verified -- integrity intact")
+
 def generate_platform_quote():
-    pass
+    nonce = secrets.token_hex(NONCE_LEN)
+
+    quote_msg = "quote_msg.dat"
+    quote_sig = "quote_sig.dat"
+
+    tpm_flush()
+
+    result = subprocess.run(
+        ["tpm2_quote", "-c", TPM_CONTEXT, "-l", "sha256:16", "-q", nonce, "-m", quote_msg, "-s", quote_sig],
+        capture_output=True, text=True, check=False
+    )
+
+    tpm_flush()
+
+    if result.returncode != 0:
+        print("FAILURE : platform quote generation failed")
+        print(f"DEBUG : {result.stderr}")
+        return
+    
+    print(f"nonce : {nonce}")
+    print("SUCCESS : certified quote generated")
+    print(f"quote message : {quote_msg}")
+    print(f"quote signature : {quote_sig}")
+    
 
 
 def main():
@@ -381,6 +485,16 @@ def main():
         
         if choice == 8:
             access_top_secret()
+        
+        if choice == 9:
+            entry_text = input("Ledger entry: ").strip()
+            append_ledger_entry(entry_text)
+        
+        if choice == 10:
+            verify_ledger()
+        
+        if choice == 11:
+            generate_platform_quote()
 
 if __name__ == "__main__":
     main()

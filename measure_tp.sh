@@ -35,5 +35,5 @@ if [ "$1" == "--baseline" ]; then
     echo "Baseline saved to $PCR_GOOD_FILE"
 else
     echo "No --baseline flag, skipping save"
-fi
+fi  
 
